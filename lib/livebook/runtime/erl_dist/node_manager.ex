@@ -63,7 +63,7 @@ defmodule Livebook.Runtime.ErlDist.NodeManager do
   """
   @spec start_runtime_server(node(), keyword()) :: {:ok, pid()} | {:error, :down}
   def start_runtime_server(node, opts \\ []) do
-    if pid = :rpc.call(node, Process, :whereis, [@name]) do
+    if pid = nilify(:rpc.call(node, :erlang, :whereis, [@name])) do
       ref = Process.monitor(pid)
       send(pid, {:start_runtime_server, self(), ref, opts})
 
@@ -274,4 +274,8 @@ defmodule Livebook.Runtime.ErlDist.NodeManager do
       _ -> sink_loop()
     end
   end
+
+  defp nilify(:undefined), do: nil
+  defp nilify(:undef), do: nil
+  defp nilify(other), do: other
 end

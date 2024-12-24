@@ -42,6 +42,9 @@ defmodule Livebook.Runtime.Attached do
 
     with :ok <- connect_to_node(node),
          :ok <- check_attached_node_version(node) do
+
+          IO.inspect("connect to node ok and check attached node version ok")
+
       server_pid =
         Livebook.Runtime.ErlDist.initialize(node,
           node_manager_opts: [parent_node: node(), capture_orphan_logs: false]
@@ -64,15 +67,38 @@ defmodule Livebook.Runtime.Attached do
     end
   end
 
+  defp check_node_language(node) do
+    cond do
+      match?({:module, _}, :rpc.call(node, :code, :is_loaded, [:"Elixir.System"])) -> :elixir
+      is_list(:rpc.call(node, :erlang, :system_info, [:otp_release])) -> :erlang
+      true -> :unknown
+    end
+  end
+
   defp check_attached_node_version(node) do
-    attached_node_version = :erpc.call(node, System, :version, [])
+    case check_node_language(node) do
+      :elixir ->
+        attached_node_version = :erpc.call(node, System, :version, [])
 
-    requirement = elixir_version_requirement()
+        requirement = elixir_version_requirement()
 
-    if Version.match?(attached_node_version, requirement) do
-      :ok
-    else
-      {:error, "the node uses Elixir #{attached_node_version}, but #{requirement} is required"}
+        if Version.match?(attached_node_version, requirement) do
+          :ok
+        else
+          {:error, "the node uses Elixir #{attached_node_version}, but #{requirement} is required"}
+        end
+
+      :erlang ->
+        otp_version     = :rpc.call(node, :erlang, :system_info, [:otp_release])
+        current_version = :erlang.system_info(:otp_release)
+
+        if to_string(otp_version) == to_string(current_version) do
+          :ok
+        else
+          {:error, "Incompatible OTP version, attached node (#{otp_version}) and livebook (#{current_version})"}
+        end
+      _ ->
+        {:error, "Unrecognized language at the node."}
     end
   end
 

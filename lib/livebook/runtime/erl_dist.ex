@@ -61,6 +61,8 @@ defmodule Livebook.Runtime.ErlDist do
   """
   @spec initialize(node(), keyword()) :: pid()
   def initialize(node, opts \\ []) do
+    node |> IO.inspect()
+    opts |> IO.inspect()
     # First, we attempt to communicate with the node manager, in case
     # there is one running. Otherwise, the node is not initialized,
     # so we need to initialize it and try again
@@ -104,6 +106,7 @@ defmodule Livebook.Runtime.ErlDist do
   end
 
   defp start_node_manager(node, opts) do
+    node |> IO.inspect()
     :rpc.call(node, Livebook.Runtime.ErlDist.NodeManager, :start, [opts])
   end
 
