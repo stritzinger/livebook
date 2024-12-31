@@ -43,8 +43,6 @@ defmodule Livebook.Runtime.Attached do
     with :ok <- connect_to_node(node),
          :ok <- check_attached_node_version(node) do
 
-          IO.inspect("connect to node ok and check attached node version ok")
-
       server_pid =
         Livebook.Runtime.ErlDist.initialize(node,
           node_manager_opts: [parent_node: node(), capture_orphan_logs: false]

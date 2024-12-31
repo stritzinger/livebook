@@ -1513,7 +1513,6 @@ defmodule Livebook.Session do
   def handle_info({:DOWN, ref, :process, _, reason}, state)
       when ref == state.runtime_connect.ref do
 
-        IO.inspect("asdjkshvjblwuhvnjkfsjfkd")
 
     broadcast_error(
       state.session_id,
@@ -1591,7 +1590,6 @@ defmodule Livebook.Session do
           handle_operation(state, {:runtime_connected, @client_id, runtime})
 
         {:error, message} ->
-          IO.inspect("`FALLO AQUI :(((((((()))))))) ----------")
 
           broadcast_error(state.session_id, "connecting runtime failed - #{message}")
           handle_operation(state, {:runtime_down, @client_id})
