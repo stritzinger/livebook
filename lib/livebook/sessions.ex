@@ -13,8 +13,6 @@ defmodule Livebook.Sessions do
   """
   @spec create_session(keyword()) :: {:ok, Session.t()} | {:error, any()}
   def create_session(opts \\ []) do
-
-    IO.inspect("Create sessionz ")
     id = Utils.random_node_aware_id()
 
     opts = Keyword.put(opts, :id, id)

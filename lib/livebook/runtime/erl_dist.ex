@@ -109,7 +109,6 @@ defmodule Livebook.Runtime.ErlDist do
   """
   @spec initialize(node(), keyword()) :: pid()
   def initialize(node, opts \\ []) do
-    node |> IO.inspect()
     # First, we attempt to communicate with the node manager, in case
     # there is one running. Otherwise, the node is not initialized,
     # so we need to initialize it and try again
@@ -119,21 +118,25 @@ defmodule Livebook.Runtime.ErlDist do
 
       {:error, :down} ->
         case modules_loaded?(node) do
-          {:error, _} -> load_required_modules(node,  required_modules())
+          {:error, _} -> load_required_modules(node, required_modules())
           _ -> :ok
         end
+
         case elixir_modules_loaded?(node) do
           {:error, _} ->
-            load_required_modules(node,  elixir_required_modules())
+            load_required_modules(node, elixir_required_modules())
             load_elixir_and_compiler(node)
-          _ -> :ok
+
+          _ ->
+            :ok
         end
 
         {:ok, _} = start_node_manager(node, opts[:node_manager_opts] || [])
         {:ok, pid} = start_runtime_server(node, opts[:runtime_server_opts] || [])
         pid
+
       other ->
-        other |> IO.inspect()
+        other
     end
   end
 
@@ -160,7 +163,6 @@ defmodule Livebook.Runtime.ErlDist do
       end
     end
   end
-
 
   defp load_elixir_and_compiler(node) do
     for file <- File.ls!(@elixir_ebin) do
