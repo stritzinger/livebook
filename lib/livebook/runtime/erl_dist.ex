@@ -109,8 +109,6 @@ defmodule Livebook.Runtime.ErlDist do
   """
   @spec initialize(node(), keyword()) :: pid()
   def initialize(node, opts \\ []) do
-    IO.inspect("initialize, node:")
-    node |> IO.inspect()
     # First, we attempt to communicate with the node manager, in case
     # there is one running. Otherwise, the node is not initialized,
     # so we need to initialize it and try again
@@ -139,14 +137,11 @@ defmodule Livebook.Runtime.ErlDist do
         pid
 
       other ->
-        IO.inspect("initialize, node:")
-        other |> IO.inspect()
+        other
     end
   end
 
   defp load_required_modules(node, modules) do
-    IO.inspect("load_required_modules")
-
     for module <- modules do
       {_module, binary, filename} = :code.get_object_code(module)
 
