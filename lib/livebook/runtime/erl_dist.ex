@@ -20,10 +20,10 @@ defmodule Livebook.Runtime.ErlDist do
   Livebook modules necessary for evaluation within a runtime node.
   """
 
-  @elixir_ebin "path/to/elixir/1.18/lib/elixir/ebin"
-  @elixir_app_path "path/to/elixir/1.18/lib/elixir/ebin/elixir.app"
-  @compiler_path "path/to/erlang/26.2.2/lib/compiler-8.4.1/ebin"
-  @compiler_app_path "path/to/erlang/26.2.2/lib/compiler-8.4.1/ebin/compiler.app"
+  @elixir_ebin Application.app_dir(:elixir, "ebin")
+  @elixir_app Application.app_dir(:elixir, "ebin/elixir.app")
+  @compiler_ebin Application.app_dir(:compiler, "ebin")
+  @compiler_app Application.app_dir(:compiler, "ebin/compiler.app")
 
   @spec required_modules() :: list(module())
   def required_modules() do
@@ -109,6 +109,7 @@ defmodule Livebook.Runtime.ErlDist do
   """
   @spec initialize(node(), keyword()) :: pid()
   def initialize(node, opts \\ []) do
+    IO.inspect("initialize, node:")
     node |> IO.inspect()
     # First, we attempt to communicate with the node manager, in case
     # there is one running. Otherwise, the node is not initialized,
@@ -118,26 +119,34 @@ defmodule Livebook.Runtime.ErlDist do
         pid
 
       {:error, :down} ->
-        case modules_loaded?(node) do
-          {:error, _} -> load_required_modules(node,  required_modules())
-          _ -> :ok
-        end
-        case elixir_modules_loaded?(node) do
+        case modules_loaded?(node, [:elixir]) do
           {:error, _} ->
-            load_required_modules(node,  elixir_required_modules())
             load_elixir_and_compiler(node)
+            load_required_modules(node, elixir_required_modules())
+            set_elixir_env(node)
+
+          _ ->
+            :ok
+        end
+
+        case modules_loaded?(node, [Livebook.Runtime.ErlDist.NodeManager]) do
+          {:error, _} -> load_required_modules(node, required_modules())
           _ -> :ok
         end
 
         {:ok, _} = start_node_manager(node, opts[:node_manager_opts] || [])
         {:ok, pid} = start_runtime_server(node, opts[:runtime_server_opts] || [])
         pid
+
       other ->
+        IO.inspect("initialize, node:")
         other |> IO.inspect()
     end
   end
 
   defp load_required_modules(node, modules) do
+    IO.inspect("load_required_modules")
+
     for module <- modules do
       {_module, binary, filename} = :code.get_object_code(module)
 
@@ -161,39 +170,6 @@ defmodule Livebook.Runtime.ErlDist do
     end
   end
 
-
-  defp load_elixir_and_compiler(node) do
-    for file <- File.ls!(@elixir_ebin) do
-      if Path.extname(file) == ".beam" do
-        {module, binary, filename} = :code.get_object_code(String.to_atom(Path.rootname(file)))
-        :rpc.call(node, :code, :load_binary, [module, filename, binary])
-      end
-    end
-
-    for file <- File.ls!(@compiler_path) do
-      if Path.extname(file) == ".beam" do
-        {module, binary, filename} = :code.get_object_code(String.to_atom(Path.rootname(file)))
-        :rpc.call(node, :code, :load_binary, [module, filename, binary])
-      end
-    end
-
-    :rpc.call(node, File, :mkdir, ["/tmp/ebin"])
-    :rpc.call(node, Code, :append_path, ["/tmp/ebin"])
-
-    File.read!(@elixir_app_path)
-    |> :rpc.call(node, File, :write, ["/tmp/ebin/elixir.app", []])
-
-    File.read!(@compiler_app_path)
-    |> :rpc.call(node, File, :write, ["/tmp/ebin/compiler.app", []])
-
-    :rpc.call(node, :application, :load, [:elixir])
-    :rpc.call(node, :application, :load, [:compiler])
-
-    :rpc.call(node, :application, :set_env, [:logger, :truncate, 8192])
-    :rpc.call(node, :application, :set_env, [:logger, :level, :info])
-    :rpc.call(node, :application, :set_env, [:logger, :utc_log, true])
-  end
-
   defp start_node_manager(node, opts) do
     :rpc.call(node, Livebook.Runtime.ErlDist.NodeManager, :start, [opts])
   end
@@ -202,12 +178,52 @@ defmodule Livebook.Runtime.ErlDist do
     Livebook.Runtime.ErlDist.NodeManager.start_runtime_server(node, opts)
   end
 
-  defp modules_loaded?(node) do
-    :rpc.call(node, :code, :ensure_loaded, [Livebook.Runtime.ErlDist.NodeManager])
+  defp modules_loaded?(node, modules) do
+    :rpc.call(node, :code, :ensure_loaded, modules)
   end
 
-  defp elixir_modules_loaded?(node) do
-    :rpc.call(node, :code, :ensure_loaded, [:elixir])
+  defp load_elixir_and_compiler(node) do
+    load_ebin_files(node, @compiler_ebin)
+    load_ebin_files(node, @elixir_ebin)
+
+    :rpc.call(node, File, :mkdir, ["/tmp/ebin"])
+    :rpc.call(node, Code, :append_path, ["/tmp/ebin"])
+
+    load_app_file(node, @elixir_app, "/tmp/ebin/elixir.app")
+    load_app_file(node, @compiler_app, "/tmp/ebin/compiler.app")
+  end
+
+  defp load_ebin_files(node, path) do
+    for file <- File.ls!(path) do
+      case file |> Path.extname() do
+        ".beam" ->
+          {module, binary, filename} =
+            :code.get_object_code(String.to_atom(file |> Path.rootname()))
+
+          :rpc.call(node, :code, :load_binary, [module, filename, binary])
+
+        _ ->
+          :ok
+      end
+    end
+  end
+
+  defp load_app_file(node, file, path) do
+    case File.read(file) do
+      {:ok, content} ->
+        :rpc.call(node, File, :write, [path, content, []])
+        :rpc.call(node, :application, :load, [:elixir])
+
+      {:error, reason} ->
+        IO.puts("Failed to read: #{reason}")
+    end
+  end
+
+  defp set_elixir_env(node) do
+    :rpc.call(node, :application, :ensure_all_started, [:elixir])
+    :rpc.call(node, :application, :set_env, [:logger, :truncate, 8192])
+    :rpc.call(node, :application, :set_env, [:logger, :level, :info])
+    :rpc.call(node, :application, :set_env, [:logger, :utc_log, true])
   end
 
   @doc """
