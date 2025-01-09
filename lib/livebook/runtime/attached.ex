@@ -1,9 +1,9 @@
 defmodule Livebook.Runtime.Attached do
-  # A runtime backed by an Elixir node managed externally.
+  # A runtime backed by an Elixir/Erlang node managed externally.
   #
   # Such node must be already started and accessible. Livebook doesn't
   # manage the node's lifetime in any way and only loads/unloads the
-  # necessary modules and processes. The node can be an ordinary Elixir
+  # necessary modules and processes. The node can be an ordinary Elixir/Erlang
   # runtime, a Mix project shell, a running release or anything else.
 
   defstruct [:node, :cookie, :server_pid]
@@ -65,40 +65,58 @@ defmodule Livebook.Runtime.Attached do
   end
 
   defp check_node_language(node) do
-    cond do
-      match?({:module, _}, :rpc.call(node, :code, :is_loaded, [:"Elixir.System"])) -> :elixir
-      is_list(:rpc.call(node, :erlang, :system_info, [:otp_release])) -> :erlang
-      true -> :unknown
+    case node_language(node) do
+      :elixir -> :elixir
+      :erlang -> :erlang
+      _ -> :unknown
     end
+  end
+
+  defp node_language(node) do
+    if elixir_node?(node), do: :elixir, else: if(erlang_node?(node), do: :erlang, else: :unknown)
+  end
+
+  defp elixir_node?(node) do
+    match?({:module, _}, :rpc.call(node, :code, :is_loaded, [:"Elixir.System"]))
+  end
+
+  defp erlang_node?(node) do
+    is_list(:rpc.call(node, :erlang, :system_info, [:otp_release]))
   end
 
   defp check_attached_node_version(node) do
     case check_node_language(node) do
-      :elixir ->
-        attached_node_version = :erpc.call(node, System, :version, [])
+      :elixir -> check_elixir_node_version(node)
+      :erlang -> check_erlang_node_version(node)
+      _ -> {:error, "Unrecognized language at the node."}
+    end
+  end
 
-        requirement = elixir_version_requirement()
+  defp check_elixir_node_version(node) do
+    attached_elixir_node_version = :erpc.call(node, System, :version, [])
+    requirement = elixir_version_requirement()
 
-        if Version.match?(attached_node_version, requirement) do
-          :ok
-        else
-          {:error,
-           "the node uses Elixir #{attached_node_version}, but #{requirement} is required"}
-        end
+    if Version.match?(attached_elixir_node_version, requirement) do
+      :ok
+    else
+      {:error,
+       "The attached node is running Elixir version #{attached_elixir_node_version}, " <>
+         "but version #{requirement} is required to ensure compatibility."}
+    end
+  end
 
-      :erlang ->
-        otp_version = :rpc.call(node, :erlang, :system_info, [:otp_release])
-        current_version = :erlang.system_info(:otp_release)
+  defp check_erlang_node_version(node) do
+    attached_erlang_node_version =
+      :rpc.call(node, :erlang, :system_info, [:otp_release]) |> List.to_string()
 
-        if to_string(otp_version) == to_string(current_version) do
-          :ok
-        else
-          {:error,
-           "Incompatible OTP version, attached node (#{otp_version}) and livebook (#{current_version})"}
-        end
+    requirement = erlang_version_requirement()
 
-      _ ->
-        {:error, "Unrecognized language at the node."}
+    if attached_erlang_node_version == requirement do
+      :ok
+    else
+      {:error,
+       "Version mismatch detected: the attached node is running OTP version #{attached_erlang_node_version}, " <>
+         "but the local system is using OTP version #{requirement}. Please align the OTP versions to proceed."}
     end
   end
 
@@ -129,6 +147,21 @@ defmodule Livebook.Runtime.Attached do
       end
 
     "~> " <> min_version
+  end
+
+  @doc """
+  Returns requirement for the attached node Erlang version.
+  """
+  @spec erlang_version_requirement() :: String.t()
+  def erlang_version_requirement() do
+    # We load compiled module binaries into the remote node. Erlang
+    # provides good compatibility for the BEAM binary format, and
+    # in case loading fails, we show an appropriate message. However,
+    # it is more likely that the Erlang core functions used in the
+    # compiled module differ across versions. We assume that such
+    # changes are unlikely within the same major version, so that's
+    # the requirement we enforce.
+    :erlang.system_info(:otp_release) |> List.to_string()
   end
 end
 

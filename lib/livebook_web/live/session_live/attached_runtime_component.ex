@@ -65,6 +65,9 @@ defmodule LivebookWeb.SessionLive.AttachedRuntimeComponent do
       <div class="text-gray-700 markdown">
         <pre><code>iex --name {test_node()} --cookie mycookie -S mix</code></pre>
       </div>
+      <div class="info-box scroll-mt-4">
+        ⚠️ <strong>Note</strong>: Initial connection to an Erlang node may take ~15 seconds for setup the node.
+      </div>
       <p class="text-gray-700">
         Then enter the connection information below:
       </p>
