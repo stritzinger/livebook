@@ -198,9 +198,15 @@ defmodule Livebook.Runtime.ErlDist do
       |> :erlang.term_to_binary()
       |> :zlib.gzip()
 
-    :rpc.call(node, Livebook.Runtime.ErlDist.LoadCompressedModules, :load_compressed_modules, [
-      binary
-    ])
+    case :rpc.call(
+           node,
+           Livebook.Runtime.ErlDist.LoadCompressedModules,
+           :load_compressed_modules,
+           [binary]
+         ) do
+      :ok -> :ok
+      _ -> raise "Failed to load #{inspect(modules)} on remote node"
+    end
   end
 
   defp load_helper_module(node) do
