@@ -37,6 +37,7 @@ defmodule Livebook.MixProject do
       mod: {Livebook.Application, []},
       extra_applications: [
         :logger,
+        :mix,
         :runtime_tools,
         :os_mon,
         :inets,
@@ -201,7 +202,7 @@ defmodule Livebook.MixProject do
 
     File.mkdir_p!(destination)
 
-    for module <- Livebook.Runtime.ErlDist.required_modules() do
+    for module <- Livebook.Runtime.ErlDist.livebook_required_modules() do
       from = Path.join(source, "#{module}.beam")
       to = Path.join(destination, "#{module}.beam")
       File.cp!(from, to)
