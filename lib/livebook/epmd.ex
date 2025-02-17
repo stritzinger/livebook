@@ -36,8 +36,14 @@ defmodule Livebook.EPMD do
   def register_node(name, port, family) do
     :persistent_term.put(:livebook_dist_port, port)
 
-    case :erl_epmd.register_node(name, port, family) do
-      {:ok, creation} -> {:ok, creation}
+    case :braidnode_epmd.register_node(name, port, family) do
+      {:ok, creation} ->
+        # This modules waits for the Livebook application to run,
+        # Therefore the braidnode_epmd process is not available
+        # at the time braidnode_client connects.
+        # We need to wait Livebook to start and the register here.
+        :braidnode_connector.add_node_to_cluster()
+        {:ok, creation}
       {:error, :already_registered} -> {:error, :already_registered}
       # If registration fails because EPMD is not running, we ignore
       # that, because we do not rely on EPMD
@@ -55,7 +61,7 @@ defmodule Livebook.EPMD do
   end
 
   def port_please(name, host, timeout) do
-    :erl_epmd.port_please(name, host, timeout)
+    :braidnode_epmd.port_please(name, host, timeout)
   end
 
   # Custom callback for resolving remote runtime node domain, such as
@@ -69,12 +75,12 @@ defmodule Livebook.EPMD do
   end
 
   def address_please(name, host, address_family) do
-    :erl_epmd.address_please(name, host, address_family)
+    :braidnode_epmd.address_please(name, host, address_family)
   end
 
   # Default EPMD callbacks
 
-  defdelegate start_link(), to: :erl_epmd
-  defdelegate listen_port_please(name, host), to: :erl_epmd
-  defdelegate names(host_name), to: :erl_epmd
+  defdelegate start_link(), to: :braidnode_epmd
+  defdelegate listen_port_please(name, host), to: :braidnode_epmd
+  defdelegate names(host_name), to: :braidnode_epmd
 end
