@@ -59,11 +59,14 @@ defmodule LivebookWeb.SessionLive.AttachedRuntimeComponent do
       <p class="text-gray-700">
         Connect the session to an already running node
         and evaluate code in the context of that node.
-        The node must run Elixir {Livebook.Runtime.Attached.elixir_version_requirement()}.
+        The node must run Elixir {Livebook.Runtime.Attached.elixir_version_requirement()} or Erlang/OTP-{Livebook.Runtime.Attached.erlang_version_requirement()}.
         Make sure to give the node a name and a cookie, for example:
       </p>
       <div class="text-gray-700 markdown">
         <pre><code>iex --name {test_node()} --cookie mycookie -S mix</code></pre>
+      </div>
+      <div class="info-box scroll-mt-4">
+        ⚠️ <strong>Note</strong>: Initial connection to an Erlang node may take ~15 seconds for setup the node.
       </div>
       <p class="text-gray-700">
         Then enter the connection information below:
