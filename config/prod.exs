@@ -14,6 +14,9 @@ config :livebook, :iframe_port, 8081
 # Set log level to warning by default to reduce output
 config :logger, level: :warning
 
+config :braidnode, :braidnet_domain, ~c'localhost'
+config :braidnode, :braidnet_port, 9090
+
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key
