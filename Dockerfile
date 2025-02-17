@@ -45,7 +45,8 @@ RUN mix local.hex --force && \
 # Build for production
 ENV MIX_ENV=prod
 
-COPY _checkouts/braidnode/ ./_checkouts/braidnode/
+# Uncomment for development
+# COPY _checkouts/braidnode/ ./_checkouts/braidnode/
 
 # Install mix dependencies
 COPY mix.exs mix.lock ./
