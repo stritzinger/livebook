@@ -38,10 +38,10 @@ defmodule Livebook.EPMD do
 
     case :braidnode_epmd.register_node(name, port, family) do
       {:ok, creation} ->
-        # This modules waits for the Livebook application to run,
+        # This module waits for the Livebook application to run,
         # Therefore the braidnode_epmd process is not available
         # at the time braidnode_client connects.
-        # We need to wait Livebook to start and the register here.
+        # We need to wait for Livebook to start and then register here.
         :braidnode_connector.add_node_to_cluster()
         {:ok, creation}
       {:error, :already_registered} -> {:error, :already_registered}
