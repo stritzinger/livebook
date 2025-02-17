@@ -117,7 +117,7 @@ HEALTHCHECK CMD wget --no-verbose --tries=1 --spider http://localhost:${LIVEBOOK
 
 EXPOSE 8080/tcp
 
-# ENV ELIXIR_ERL_OPTIONS="-kernel proto_dist inet6_tls -kernel ssl_dist_optfile \"/app/lib/braidnode-0.2.0/priv/ssl_dist_opts.rel\""
+ENV ERL_AFLAGS="-proto_dist proto_dist inet6_tls -ssl_dist_optfile \"/app/lib/braidnode-0.2.0/priv/ssl_dist_opts.rel\""
 ENV LIVEBOOK_COOKIE="cookie"
 
 CMD LIVEBOOK_NODE="${NODE_NAME}@${NODE_HOST}" /app/bin/server
