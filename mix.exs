@@ -44,7 +44,8 @@ defmodule Livebook.MixProject do
         :ssl,
         :xmerl,
         :crypto,
-        :public_key
+        :public_key,
+        :braidnode
       ],
       env: Application.get_all_env(:livebook)
     ]
@@ -129,7 +130,10 @@ defmodule Livebook.MixProject do
       {:jose, "~> 1.11.5"},
       {:req, "~> 0.5.8"},
       # Docs
-      {:ex_doc, "~> 0.30", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.30", only: :dev, runtime: false},
+      # braid deps
+      {:braidnode, git: "https://github.com/stritzinger/braidnode.git", branch: "main"}
+      # {:braidnode, path: "_checkouts/braidnode"}
     ]
   end
 
