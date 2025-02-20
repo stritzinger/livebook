@@ -17,6 +17,8 @@ config :logger, level: :warning
 config :braidnode, :braidnet_domain, ~c'localhost'
 config :braidnode, :braidnet_port, 9090
 
+config :kernel, connect_all: false
+
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key
