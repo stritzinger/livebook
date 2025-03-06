@@ -62,14 +62,45 @@ iris = [
 :ok
 ```
 
+```elixir
+Kino.SmartCell.register(KinoVegaLite.ChartCell)
+```
+
+```elixir
+Kino.SmartCell.definitions()
+```
+
+```elixir
+:code.lib_dir(:kino_vega_lite)
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6bnVsbCwiaGVpZ2h0IjpudWxsLCJsYXllcnMiOlt7ImFjdGl2ZSI6dHJ1ZSwiY2hhcnRfdHlwZSI6InBvaW50IiwiY29sb3JfZmllbGQiOm51bGwsImNvbG9yX2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwiY29sb3JfZmllbGRfYmluIjpudWxsLCJjb2xvcl9maWVsZF9zY2FsZV9zY2hlbWUiOm51bGwsImNvbG9yX2ZpZWxkX3R5cGUiOm51bGwsImRhdGFfdmFyaWFibGUiOiJpcmlzIiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoicGV0YWxfbGVuZ3RoIiwieF9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInhfZmllbGRfYmluIjpudWxsLCJ4X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInhfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSIsInlfZmllbGQiOiJwZXRhbF93aWR0aCIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ5X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUifV0sInZsX2FsaWFzIjoiRWxpeGlyLlZsIiwid2lkdGgiOm51bGx9","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+Vl.new()
+|> Vl.data_from_values(iris, only: ["petal_length", "petal_width"])
+|> Vl.mark(:point)
+|> Vl.encode_field(:x, "petal_length", type: :quantitative)
+|> Vl.encode_field(:y, "petal_width", type: :quantitative)
+```
+
+```elixir
+data = %{id: [1, 2, 3], name: ["Sherlock", "John", "Mycroft"]}
+data |> Table.to_rows() |> Enum.to_list()
+```
+
+```elixir
+vl = Vl.new() |> Vl.data_from_values([%{x: 1, y: 10}, %{x: 2, y: 20}])
+
+Kino.VegaLite.new(vl)
+```
+
 Now, to insert a new Chart cell, place your cursor between cells,
 click on the <kbd>+ Smart</kbd> button and select Chart.
 
 You can see an example of that below. Click on the "Evaluate"
 button to see the chart, then see how it changes as you customize
 the parameters.
-
-<!-- livebook:{"attrs":{"chart_title":"Iris","height":200,"layers":[{"chart_type":"point","color_field":"species","color_field_aggregate":null,"color_field_type":null,"data_variable":"iris","x_field":"petal_length","x_field_aggregate":null,"x_field_type":"quantitative","y_field":"petal_width","y_field_aggregate":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.Vl","width":400},"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 Vl.new(width: 400, height: 200, title: "Iris")
@@ -92,6 +123,12 @@ cells too, which we discuss in the
 <!-- livebook:{"branch_parent_index":0} -->
 
 ## Basic concepts
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6bnVsbCwiaGVpZ2h0IjpudWxsLCJsYXllcnMiOlt7ImFjdGl2ZSI6dHJ1ZSwiY2hhcnRfdHlwZSI6InBvaW50IiwiY29sb3JfZmllbGQiOm51bGwsImNvbG9yX2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwiY29sb3JfZmllbGRfYmluIjpudWxsLCJjb2xvcl9maWVsZF9zY2FsZV9zY2hlbWUiOm51bGwsImNvbG9yX2ZpZWxkX3R5cGUiOm51bGwsImRhdGFfdmFyaWFibGUiOm51bGwsImdlb2RhdGFfY29sb3IiOiJibHVlIiwibGF0aXR1ZGVfZmllbGQiOm51bGwsImxvbmdpdHVkZV9maWVsZCI6bnVsbCwieF9maWVsZCI6bnVsbCwieF9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInhfZmllbGRfYmluIjpudWxsLCJ4X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInhfZmllbGRfdHlwZSI6bnVsbCwieV9maWVsZCI6bnVsbCwieV9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInlfZmllbGRfYmluIjpudWxsLCJ5X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInlfZmllbGRfdHlwZSI6bnVsbH1dLCJ2bF9hbGlhcyI6IkVsaXhpci5WbCIsIndpZHRoIjpudWxsfQ","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+
+```
 
 Composing a basic Vega-Lite graphic usually consists of the following steps:
 

@@ -23,6 +23,18 @@ defmodule Livebook.Runtime.ErlDist do
   @compiler_ebin Application.app_dir(:compiler, "ebin")
   @compiler_app Application.app_dir(:compiler, "ebin/compiler.app")
 
+  @table_ebin Application.app_dir(:table, "ebin")
+  @table_app  Application.app_dir(:table, "ebin/table.app")
+
+  @kino_ebin Application.app_dir(:kino, "ebin")
+  @kino_app  Application.app_dir(:kino, "ebin/kino.app")
+
+  @vegalite_ebin Application.app_dir(:vega_lite, "ebin")
+  @vegalite_app  Application.app_dir(:vega_lite, "ebin/vega_lite.app")
+
+  @kino_vegalite_ebin Application.app_dir(:kino_vega_lite, "ebin")
+  @kino_vegalite_app  Application.app_dir(:kino_vega_lite, "ebin/kino_vega_lite.app")
+
   @doc """
   Livebook modules necessary for evaluation within a runtime node.
   """
@@ -123,6 +135,7 @@ defmodule Livebook.Runtime.ErlDist do
     unless module_loaded?(node, :elixir) do
       load_elixir_and_compiler(node)
       load_modules(node, elixir_required_modules())
+      load_kino_and_vl(node)
       set_elixir_env(node)
     end
 
@@ -172,6 +185,35 @@ defmodule Livebook.Runtime.ErlDist do
 
     load_app_file(node, @elixir_app, "/tmp/ebin/elixir.app")
     load_app_file(node, @compiler_app, "/tmp/ebin/compiler.app")
+  end
+
+  defp load_kino_and_vl(node) do
+
+    @table_ebin
+    |> extract_modules_from_path()
+    |> then(&load_modules(node, &1))
+
+    @kino_ebin
+    |> extract_modules_from_path()
+    |> then(&load_modules(node, &1))
+
+    @vegalite_ebin
+    |> extract_modules_from_path()
+    |> then(&load_modules(node, &1))
+
+    @kino_vegalite_ebin
+    |> extract_modules_from_path()
+    |> then(&load_modules(node, &1))
+
+
+    :rpc.call(node, File, :mkdir, ["/tmp/ebin"])
+    :rpc.call(node, Code, :append_path, ["/tmp/ebin"])
+
+    load_app_file(node, @table_app, "/tmp/ebin/table.app")
+    load_app_file(node, @kino_app,  "/tmp/ebin/kino.app")
+    load_app_file(node, @vegalite_app, "/tmp/ebin/vega_lite.app")
+    load_app_file(node, @kino_vegalite_app, "/tmp/ebin/kino_vega_lite.app")
+
   end
 
   defp load_app_file(node, file, path) do

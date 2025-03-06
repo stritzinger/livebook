@@ -343,6 +343,10 @@ defmodule Livebook.Runtime.ErlDist.RuntimeServer do
 
     schedule_memory_usage_report()
 
+    {:ok, kino_supervisor} = DynamicSupervisor.start_link(
+      name: Kino.DynamicSupervisor,
+      strategy: :one_for_one
+    )
     {:ok, evaluator_supervisor} = ErlDist.EvaluatorSupervisor.start_link()
     {:ok, task_supervisor} = Task.Supervisor.start_link()
     {:ok, object_tracker} = Evaluator.ObjectTracker.start_link()
@@ -354,6 +358,7 @@ defmodule Livebook.Runtime.ErlDist.RuntimeServer do
        runtime_broadcast_to: nil,
        evaluators: %{},
        evaluator_supervisor: evaluator_supervisor,
+       kino_supervisor: kino_supervisor,
        task_supervisor: task_supervisor,
        object_tracker: object_tracker,
        client_tracker: client_tracker,
