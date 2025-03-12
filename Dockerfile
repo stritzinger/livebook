@@ -9,30 +9,24 @@ FROM ${BASE_IMAGE} AS base-cuda
 
 ARG CUDA_VERSION
 
-RUN distro="ubuntu$(. /etc/lsb-release; echo "$DISTRIB_RELEASE" | tr -d '.')" && \
-  # Official Docker images use the sbsa packages when targetting arm64.
-  # See https://gitlab.com/nvidia/container-images/cuda/-/blob/85f465ea3343a2d7f7753a0a838701999ed58a01/dist/12.5.1/ubuntu2204/base/Dockerfile#L12
-  arch="$(if [ "$(uname -m)" = "aarch64" ]; then echo "sbsa"; else echo "x86_64"; fi)" && \
-  apt-get update && apt-get install -y ca-certificates wget && \
-  wget -qO /tmp/cuda-keyring.deb https://developer.download.nvidia.com/compute/cuda/repos/$distro/$arch/cuda-keyring_1.1-1_all.deb && \
-  dpkg -i /tmp/cuda-keyring.deb && apt-get update && \
-  # In order to minimize the image size, we install only a subset of
-  # the CUDA toolkit that is required by Elixir numerical packages
-  # (nvcc and runtime libraries). Note that we do not need to install
-  # the driver, it is already provided by NVIDIA Container Toolkit.
-  cuda_version="${CUDA_VERSION}" && cuda_major="${cuda_version%-*}" && \
-  apt-get install -y git cuda-nvcc-${CUDA_VERSION} cuda-libraries-${CUDA_VERSION} libcudnn9-cuda-$cuda_major && \
-  apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN arch="$(if [ "$(uname -m)" = "aarch64" ]; then echo "sbsa"; else echo "x86_64"; fi)" && \
+  apk update && \
+  apk add --no-cache ca-certificates wget && \
+  wget -qO /tmp/cuda-keyring.apk https://developer.download.nvidia.com/compute/cuda/repos/alpine/$arch/cuda-keyring_${CUDA_VERSION}_all.apk && \
+  apk add --allow-untrusted /tmp/cuda-keyring.apk && \
+  apk add --no-cache git cuda-nvcc-${CUDA_VERSION} cuda-libraries-${CUDA_VERSION} libcudnn9-cuda-${CUDA_VERSION} && \
+  rm -rf /var/cache/apk/*
 
 ENV PATH="/usr/local/nvidia/bin:/usr/local/cuda/bin:$PATH"
 
 # Build stage: builds the release
 FROM base-${VARIANT} AS build
 
-RUN apt-get update && apt-get upgrade -y && \
-  apt-get install --no-install-recommends -y \
-    build-essential git && \
-  apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+    apk update && \
+    apk add --no-cache \
+        build-base ca-certificates git bash curl cmake && \
+    rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
@@ -50,6 +44,9 @@ RUN mix local.hex --force && \
 
 # Build for production
 ENV MIX_ENV=prod
+
+# Uncomment for development
+# COPY _checkouts/braidnode/ ./_checkouts/braidnode/
 
 # Install mix dependencies
 COPY mix.exs mix.lock ./
@@ -75,19 +72,15 @@ RUN mix do compile, release livebook
 # release with `include_erts: false`.
 FROM base-${VARIANT}
 
-ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get upgrade -y && \
-  apt-get install --no-install-recommends -y \
-    # Runtime dependencies
-    build-essential ca-certificates libncurses5-dev \
-    # In case someone uses `Mix.install/2` and point to a git repo
-    git \
-    # Additional standard tools
-    wget \
-    # In case someone uses Torchx for Nx
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+  apk update && apk upgrade && \
+  apk add --no-cache \
+    build-base ca-certificates ncurses git bash curl \
+    erlang elixir \
     cmake && \
-  apt-get clean -y && rm -rf /var/lib/apt/lists/*
+  rm -rf /var/cache/apk/*
+
 
 # Run in the /data directory by default, makes for a good place for
 # the user to mount local volume
@@ -122,4 +115,9 @@ RUN chmod -R go=u $HOME
 
 HEALTHCHECK CMD wget --no-verbose --tries=1 --spider http://localhost:${LIVEBOOK_PORT-8080}/public/health || exit 1
 
-CMD [ "/app/bin/server" ]
+EXPOSE 8080/tcp
+
+ENV ERL_AFLAGS="-proto_dist inet6_tls -ssl_dist_optfile \"/app/lib/braidnode-0.2.0/priv/ssl_dist_opts.rel\""
+ENV LIVEBOOK_COOKIE="cookie"
+
+CMD LIVEBOOK_NODE="${NODE_NAME}@${NODE_HOST}" /app/bin/server
